@@ -23,9 +23,13 @@ This record contains necessary data for replication in target table:
 4. Data itself, for both key and nonkey attributes (after)
 
 It allows us to merge Kafka stream to target table in Greenplum using MERGE mode of GPSS job.
-Please find here GPSS configuration file that allows to
+Please find here GPSS yaml file that was used in PoC:
+/test_poc.yaml
 
-Below are the following limitations and issues that we met during PoC and that are addressed to engineering:
+Testing was done for sets of insert/update/delete operations on Oracle side, tracking corresponding Kafka messages and changes in Greenplum side:
+/test_scenario.txt
+
+Following limitations and issues were met during PoC and they are addressed to engineering:
 
 ## 1. Delete option
 GPSS MERGE mode can insert and update records, but cannot delete. When we need to delete record when we receive message with op_type='D'. I think this functionality can be implemented in GPSS MERGE mode along with specifying the criteria for input message if this message should delete record.
