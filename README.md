@@ -67,7 +67,9 @@ INSERT INTO "public"."test_poc" ("op_type","id","name","birthday")
    WHERE into_table."id" IS NULL AND gpss_row_number = 1)
 ```
 However expression `row_number() OVER (PARTITION BY "id")` does not have ORDER BY clause. It means that row number is assigned randomly across set of records with the same ID and finally random record will have gpss_row_number = 1 and be inserted in target table. Normally, when processing messages from GoldenGate, the last one should be taken as it represents the latest state of record in source by the moment we are processing the batch.  
+\
 As an optimization I would advice to do deduplication when inserting in `gpsstmp_...` table rather than in insert and update statements for target table to simplify insert and update queries and avoid calling expensive window function twice.  
+\
 Summarizing on this point
 1. Implement deduplication by key
 2. Add ORDER BY clause in deduplication window statement and choose the *latest* value from batch based on position of record in Kafka queue.
