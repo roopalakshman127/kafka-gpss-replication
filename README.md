@@ -24,10 +24,10 @@ This record contains necessary data for replication in target table:
 
 It allows us to merge Kafka stream to target table in Greenplum using MERGE mode of GPSS job.
 Please find here GPSS yaml file that was used in PoC:  
-[test_poc.yaml]()
+[](test_poc.yaml)  
 
 Testing was done for sets of insert/update/delete operations on Oracle side, tracking corresponding Kafka messages and changes in Greenplum side:  
-[/test_scenario.txt]()
+[](test_scenario.txt)  
 
 Following limitations and issues were met during PoC and they are addressed to engineering:
 
@@ -80,4 +80,5 @@ CREATE TEMP TABLE gpsstmp_c77ada7f436d2bc0854a300154b1517c
      like "public"."TEST_POC"
   ) ON COMMIT drop;
 ```
-As soon as GPSS is intended to provide near-real time replication, those batches are processed frequently, i.e. once a second. That could cause catalog bloat. I advice to create table once on GPSS job start and reuse it, truncating before processing of eatch batch
+As soon as GPSS is intended to provide near-real time replication, those batches are processed frequently, i.e. once a second. That could cause catalog bloat.  
+I advice to create table once on GPSS job start and reuse it, truncating before processing of each batch
