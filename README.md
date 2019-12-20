@@ -23,11 +23,9 @@ This record contains necessary data for replication in target table:
 4. Data itself, for both key and nonkey attributes (after)
 
 It allows us to merge Kafka stream to target table in Greenplum using MERGE mode of GPSS job.
-Please find here GPSS yaml file that was used in PoC:  
-[](test_poc.yaml)  
+Here is GPSS yaml file that was used in PoC:  [test_poc.yaml](test_poc.yaml)  
 
-Testing was done for sets of insert/update/delete operations on Oracle side, tracking corresponding Kafka messages and changes in Greenplum side:  
-[](test_scenario.txt)  
+Testing was done for sets of insert/update/delete operations on Oracle side, tracking corresponding Kafka messages and changes in Greenplum side:  [test_scenario.txt](test_scenario.txt)  
 
 Following limitations and issues were met during PoC and they are addressed to engineering:
 
