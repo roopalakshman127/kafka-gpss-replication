@@ -1,0 +1,39 @@
+DATABASE: gpadmin
+USER: gpadmin
+HOST: 10.52.4.60
+PORT: 5432
+KAFKA:
+   INPUT:
+     SOURCE:
+        BROKERS: 10.52.3.72:9092
+        TOPIC: oggtopic.poc
+     COLUMNS:
+        - NAME: jdata
+          TYPE: json
+     FORMAT: json
+     ERROR_LIMIT: 10
+   OUTPUT:
+     SCHEMA: public
+     TABLE: test_poc
+     MODE: MERGE
+     MATCH_COLUMNS:
+        - id
+     UPDATE_COLUMNS:
+        - op_type
+        - name
+        - birthday
+     MAPPING:
+        - NAME: op_type
+          EXPRESSION: jdata->>'op_type'
+        - NAME: id
+          EXPRESSION: (case when jdata->>'op_type'='D' then jdata#>>'{before,ID}' else jdata#>>'{after,ID}' end)::int
+        - NAME: name
+          EXPRESSION: jdata#>>'{after,NAME}'
+        - NAME: birthday
+          EXPRESSION: (jdata#>>'{after,BIRTHDAY}')::timestamp without time zone
+        - NAME: rn
+          EXPRESSION: row_number() over (partition by jdata#>>'{after,ID}' order by jdata->>'pos' desc)
+     UPDATE_CONDITION: ext.rn=1
+   COMMIT:
+     MAX_ROW: 1000
+     MINIMAL_INTERVAL: 1000

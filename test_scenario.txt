@@ -1,0 +1,139 @@
+/data/kafka/bin/kafka-console-consumer.sh --bootstrap-server 10.52.3.72:9092 --topic oggtopic.poc --partition 0 --offset 683
+
+--transaction 0
+truncate table test_poc;
+<no kafka messages generated>
+<manually truncted in greenplum>
+gpadmin=# select * from test_poc;
+ op_type | id | name | birthday | rn
+---------+----+------+----------+----
+(0 rows)
+
+
+
+--transaction 1
+--single insert
+insert into test_poc values (1, 'Igor', '01-JAN-2000');
+
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"I","op_ts":"2019-11-21 10:05:34.000000","current_ts":"2019-11-21T11:05:37.823000","pos":"00000000250000058833","tokens":{"TK_OPTYPE":"INSERT","SCN":"61042900"},"after":{"ID":1,"NAME":"Igor","BIRTHDAY":"2000-01-01 00:00:00"}}
+
+gpadmin=# select * from test_poc;
+ op_type | id | name |      birthday       | rn
+---------+----+------+---------------------+----
+ I       |  1 | Igor | 2000-01-01 00:00:00 |  1
+(1 row)
+
+
+--transaction 2
+--multiple inserts
+insert into test_poc values (2, 'Fabio', '01-JAN-2001');
+insert into test_poc values (3, 'Gianluca', '01-JAN-2002');
+
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"I","op_ts":"2019-11-21 10:08:35.000000","current_ts":"2019-11-21T11:08:40.919000","pos":"00000000250000059021","tokens":{"TK_OPTYPE":"INSERT","SCN":"61044085"},"after":{"ID":2,"NAME":"Fabio","BIRTHDAY":"2001-01-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"I","op_ts":"2019-11-21 10:08:35.000000","current_ts":"2019-11-21T11:08:40.919001","pos":"00000000250000059209","tokens":{"TK_OPTYPE":"INSERT","SCN":"61044085"},"after":{"ID":3,"NAME":"Gianluca","BIRTHDAY":"2002-01-01 00:00:00"}}
+
+gpadmin=# select * from test_poc order by id;
+ op_type | id |   name   |      birthday       | rn
+---------+----+----------+---------------------+----
+ I       |  1 | Igor     | 2000-01-01 00:00:00 |  1
+ I       |  2 | Fabio    | 2001-01-01 00:00:00 |  1
+ I       |  3 | Gianluca | 2002-01-01 00:00:00 |  1
+(3 rows)
+
+
+
+--transaction 3
+--insert,update,delete
+insert into test_poc values (4, 'Marco', '01-JAN-2003');
+update test_poc set birthday=add_months(birthday,1) where id <3;
+delete from test_poc where id=3;
+
+
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"I","op_ts":"2019-11-21 10:13:19.000000","current_ts":"2019-11-21T11:13:23.059000","pos":"00000000250000059373","tokens":{"TK_OPTYPE":"INSERT","SCN":"61044837"},"after":{"ID":4,"NAME":"Marco","BIRTHDAY":"2003-01-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:13:19.000000","current_ts":"2019-11-21T11:13:23.060000","pos":"00000000250000059561","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61044837"},"before":{"ID":1,"NAME":"Igor","BIRTHDAY":"2000-01-01 00:00:00"},"after":{"ID":1,"NAME":"Igor","BIRTHDAY":"2000-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:13:19.000000","current_ts":"2019-11-21T11:13:23.060001","pos":"00000000250000059779","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61044837"},"before":{"ID":2,"NAME":"Fabio","BIRTHDAY":"2001-01-01 00:00:00"},"after":{"ID":2,"NAME":"Fabio","BIRTHDAY":"2001-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"D","op_ts":"2019-11-21 10:13:19.000000","current_ts":"2019-11-21T11:13:23.060002","pos":"00000000250000059999","tokens":{"TK_OPTYPE":"DELETE","SCN":"61044837"},"before":{"ID":3,"NAME":"Gianluca","BIRTHDAY":"2002-01-01 00:00:00"}}
+
+gpadmin=# select * from test_poc order by id;
+ op_type | id | name  |      birthday       | rn
+---------+----+-------+---------------------+----
+ U       |  1 | Igor  | 2000-02-01 00:00:00 |  1
+ U       |  2 | Fabio | 2001-02-01 00:00:00 |  1
+ D       |  3 |       |                     |  1
+ I       |  4 | Marco | 2003-01-01 00:00:00 |  1
+(4 rows)
+
+(Oracle)
+"ID","NAME","BIRTHDAY"
+1,"Igor",01-FEB-00
+2,"Fabio",01-FEB-01
+4,"Marco",01-JAN-03
+
+
+
+--transaction 4
+--multiple updates
+update test_poc set name=name||'_upd_1' where id <3;
+update test_poc set name=name||'_upd_2' where id <3;
+update test_poc set name=name||'_upd_3' where id <3;
+
+
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.194000","pos":"00000000250000060163","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":1,"NAME":"Igor","BIRTHDAY":"2000-02-01 00:00:00"},"after":{"ID":1,"NAME":"Igor_upd_1","BIRTHDAY":"2000-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.194001","pos":"00000000250000060414","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":2,"NAME":"Fabio","BIRTHDAY":"2001-02-01 00:00:00"},"after":{"ID":2,"NAME":"Fabio_upd_1","BIRTHDAY":"2001-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.195000","pos":"00000000250000060640","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":1,"NAME":"Igor_upd_1","BIRTHDAY":"2000-02-01 00:00:00"},"after":{"ID":1,"NAME":"Igor_upd_1_upd_2","BIRTHDAY":"2000-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.195001","pos":"00000000250000060876","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":2,"NAME":"Fabio_upd_1","BIRTHDAY":"2001-02-01 00:00:00"},"after":{"ID":2,"NAME":"Fabio_upd_1_upd_2","BIRTHDAY":"2001-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.195002","pos":"00000000250000061114","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":1,"NAME":"Igor_upd_1_upd_2","BIRTHDAY":"2000-02-01 00:00:00"},"after":{"ID":1,"NAME":"Igor_upd_1_upd_2_upd_3","BIRTHDAY":"2000-02-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:18:02.000000","current_ts":"2019-11-21T11:18:08.196000","pos":"00000000250000061362","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61045453"},"before":{"ID":2,"NAME":"Fabio_upd_1_upd_2","BIRTHDAY":"2001-02-01 00:00:00"},"after":{"ID":2,"NAME":"Fabio_upd_1_upd_2_upd_3","BIRTHDAY":"2001-02-01 00:00:00"}}
+
+gpadmin=# select * from test_poc order by id;
+ op_type | id |          name           |      birthday       | rn
+---------+----+-------------------------+---------------------+----
+ U       |  1 | Igor_upd_1_upd_2_upd_3  | 2000-02-01 00:00:00 |  1
+ U       |  2 | Fabio_upd_1_upd_2_upd_3 | 2001-02-01 00:00:00 |  1
+ D       |  3 |                         |                     |  1
+ I       |  4 | Marco                   | 2003-01-01 00:00:00 |  1
+(4 rows)
+
+"ID","NAME","BIRTHDAY"
+1,"Igor_upd_1_upd_2_upd_3",01-FEB-00
+2,"Fabio_upd_1_upd_2_upd_3",01-FEB-01
+4,"Marco",01-JAN-03
+
+
+
+--transaction 5
+update test_poc set name=name||'_upd_1' where id =4;
+delete from test_poc where id=4;
+
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"U","op_ts":"2019-11-21 10:22:34.000000","current_ts":"2019-11-21T11:22:39.323000","pos":"00000000250000061612","tokens":{"TK_OPTYPE":"SQL COMPUPDATE","SCN":"61046358"},"before":{"ID":4,"NAME":"Marco","BIRTHDAY":"2003-01-01 00:00:00"},"after":{"ID":4,"NAME":"Marco_upd_1","BIRTHDAY":"2003-01-01 00:00:00"}}
+{"table":"SIEBEL_TEST.TEST_POC","op_type":"D","op_ts":"2019-11-21 10:22:34.000000","current_ts":"2019-11-21T11:22:39.324000","pos":"00000000250000061866","tokens":{"TK_OPTYPE":"DELETE","SCN":"61046358"},"before":{"ID":4,"NAME":"Marco_upd_1","BIRTHDAY":"2003-01-01 00:00:00"}}
+
+gpadmin=# select * from test_poc order by id;
+ op_type | id |          name           |      birthday       | rn
+---------+----+-------------------------+---------------------+----
+ U       |  1 | Igor_upd_1_upd_2_upd_3  | 2000-02-01 00:00:00 |  1
+ U       |  2 | Fabio_upd_1_upd_2_upd_3 | 2001-02-01 00:00:00 |  1
+ D       |  3 |                         |                     |  1
+ D       |  4 |                         |                     |  1
+(4 rows)
+
+
+--transaction 6
+insert into test_poc values (5,'Daniele','01-JAN-2005');
+update test_poc set name=name||'_1' where id =5;
+update test_poc set name=name||'_2' where id =5;
+update test_poc set name=name||'_3' where id =5;
+update test_poc set name=name||'_4' where id =5;
+update test_poc set name=name||'_5' where id =5;
+update test_poc set name=name||'_6' where id =5;
+update test_poc set name=name||'_7' where id =5;
+
+gpadmin=# select * from test_poc order by id;
+ op_type | id |          name           |      birthday       | rn
+---------+----+-------------------------+---------------------+----
+ U       |  1 | Igor_upd_1_upd_2_upd_3  | 2000-02-01 00:00:00 |  1
+ U       |  2 | Fabio_upd_1_upd_2_upd_3 | 2001-02-01 00:00:00 |  1
+ D       |  3 |                         |                     |  1
+ D       |  4 |                         |                     |  1
+ U       |  5 | Daniele_1_2_3_4_5_6_7   | 2005-01-01 00:00:00 |  1
+(5 rows)
